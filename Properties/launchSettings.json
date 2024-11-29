@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "InStelle (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "InStelle (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
