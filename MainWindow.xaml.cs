@@ -97,9 +97,13 @@ namespace InStelle
                     RefreshNotes();
                     SaveTabs();
                 }
+
+                // Dispose of the window to clean up resources
+                noteWindow.Dispose();
+                noteWindow.Closed -= null;
             };
 
-            // Delay the activation to ensure proper z-order
+            // Activate the NoteWindow
             DispatcherQueue.TryEnqueue(() => noteWindow.Activate());
         }
 
@@ -159,9 +163,15 @@ namespace InStelle
                 return;
 
             var noteWindow = new NoteWindow(note, currentTab, RefreshNotes, SaveTabs);
-            noteWindow.Activate(); // Show the window
 
-            // Delay the activation to ensure proper z-order
+            noteWindow.Closed += (s, args) =>
+            {
+                // Dispose of the window to clean up resources
+                noteWindow.Dispose();
+                noteWindow.Closed -= null;
+            };
+
+            // Activate the NoteWindow
             DispatcherQueue.TryEnqueue(() => noteWindow.Activate());
         }
 

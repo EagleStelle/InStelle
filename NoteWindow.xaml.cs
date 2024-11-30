@@ -3,7 +3,7 @@ using System;
 
 namespace InStelle
 {
-    public sealed partial class NoteWindow : Window
+    public sealed partial class NoteWindow : Window, IDisposable
     {
         private Note _note;
         private TabData _currentTab;
@@ -61,6 +61,22 @@ namespace InStelle
 
             // Close the window
             this.Close();
+        }
+
+        private bool _disposed = false;
+
+        public void Dispose()
+        {
+            if (_disposed) return;
+
+            // Clean up unmanaged resources here if needed
+
+            _disposed = true;
+        }
+
+        ~NoteWindow()
+        {
+            Dispose();
         }
     }
 }
