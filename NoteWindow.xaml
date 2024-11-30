@@ -10,15 +10,32 @@
     <Grid Background="#2D1E37">
         <!-- Define rows for title, description, and buttons -->
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" />
-            <!-- Title -->
             <RowDefinition Height="*" />
             <!-- Description -->
+            <RowDefinition Height="Auto" />
+            <!-- Title -->
             <RowDefinition Height="Auto" />
             <!-- Save/Cancel Buttons -->
             <RowDefinition Height="Auto" />
             <!-- Delete Button -->
         </Grid.RowDefinitions>
+
+        <!-- Scrollable Description -->
+        <ScrollViewer Margin="10" VerticalScrollBarVisibility="Auto">
+            <TextBox
+                x:Name="DescriptionTextBox"
+                Text=""
+                PlaceholderText="Enter description here..."
+                AcceptsReturn="True"
+                TextWrapping="Wrap"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                Padding="10"
+                Background="#654062"
+                Foreground="#F5E8D3"
+                BorderBrush="#F6C5B8"
+                BorderThickness="1" />
+        </ScrollViewer>
 
         <!-- Editable Title -->
         <TextBox
@@ -35,24 +52,8 @@
             BorderBrush="#F6C5B8"
             BorderThickness="1"
             Margin="10"
-            VerticalAlignment="Top" />
-
-        <!-- Scrollable Description -->
-        <ScrollViewer Grid.Row="1" Margin="10" VerticalScrollBarVisibility="Auto">
-            <TextBox
-                x:Name="DescriptionTextBox"
-                Text=""
-                PlaceholderText="Enter description here..."
-                AcceptsReturn="True"
-                TextWrapping="Wrap"
-                HorizontalAlignment="Stretch"
-                VerticalAlignment="Stretch"
-                Padding="10"
-                Background="#654062"
-                Foreground="#F5E8D3"
-                BorderBrush="#F6C5B8"
-                BorderThickness="1" />
-        </ScrollViewer>
+            VerticalAlignment="Top" 
+            Grid.Row="1" />
 
         <!-- Save and Cancel Buttons (Horizontal Layout) -->
         <Grid Grid.Row="2" ColumnDefinitions="*,*">
@@ -94,7 +95,7 @@
             HorizontalAlignment="Stretch"
             Margin="10"
             MinHeight="50"
-            Background="#D38183"
+            Background="#C9636E"
             Foreground="#F5E8D3"
             FontWeight="Bold" />
     </Grid>

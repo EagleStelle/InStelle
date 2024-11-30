@@ -54,12 +54,74 @@ namespace InStelle
                 Height = 50,
                 Margin = new Thickness(5),
                 Tag = tab,
-                Background = new SolidColorBrush(ColorHelper.FromArgb(255, 201, 99, 110)), // Red accent
+                Background = new SolidColorBrush(ColorHelper.FromArgb(255, 211, 129, 131)), // Red accent
                 Foreground = new SolidColorBrush(ColorHelper.FromArgb(255, 81, 53, 89)) // Darker purple
             };
+
+            // Set click behavior to activate tab
             button.Click += (s, e) => SetActiveTab(tab);
+
+            // Create the context menu
+            var menuFlyout = new MenuFlyout();
+
+            // Add Edit option
+            var editMenuItem = new MenuFlyoutItem { Text = "Edit Tab" };
+            editMenuItem.Click += (s, e) => EditTab(tab, button);
+            menuFlyout.Items.Add(editMenuItem);
+
+            // Add Delete option
+            var deleteMenuItem = new MenuFlyoutItem { Text = "Delete Tab" };
+            deleteMenuItem.Click += (s, e) => DeleteTab(tab, button);
+            menuFlyout.Items.Add(deleteMenuItem);
+
+            // Attach the context menu to the button
+            button.ContextFlyout = menuFlyout;
+
             return button;
         }
+
+        private async void EditTab(TabData tab, Button button)
+        {
+            var dialog = new ContentDialog
+            {
+                Title = "Edit Tab",
+                XamlRoot = this.Content.XamlRoot,
+                CloseButtonText = "Cancel",
+                PrimaryButtonText = "Save"
+            };
+
+            // Input fields for icon and name
+            var stackPanel = new StackPanel();
+            var iconBox = new TextBox { PlaceholderText = "Icon (e.g., 📄)", Text = tab.Icon };
+            stackPanel.Children.Add(new TextBlock { Text = "Icon:" });
+            stackPanel.Children.Add(iconBox);
+
+            dialog.Content = stackPanel;
+
+            var result = await dialog.ShowAsync();
+            if (result == ContentDialogResult.Primary)
+            {
+                tab.Icon = iconBox.Text;
+                button.Content = tab.Icon; // Update the button's display
+                SaveTabs(); // Save changes
+            }
+        }
+        private void DeleteTab(TabData tab, Button button)
+        {
+            // Remove tab data and UI element
+            tabs.Remove(tab);
+            TabPanel.Children.Remove(button);
+
+            // Set a new active tab if the deleted tab was active
+            if (currentTab == tab)
+            {
+                currentTab = tabs.Count > 0 ? tabs[0] : null;
+                RefreshNotes();
+            }
+
+            SaveTabs(); // Save changes
+        }
+
 
         private void SetActiveTab(TabData tab)
         {
@@ -107,54 +169,48 @@ namespace InStelle
             DispatcherQueue.TryEnqueue(() => noteWindow.Activate());
         }
 
-        private Border CreateCard(string title, string description, Action onClick, bool isAddCard = false)
+        private StackPanel CreateCard(string title, string description, Action onClick, bool isAddCard = false)
         {
             var card = new StackPanel
             {
                 Orientation = Orientation.Vertical,
                 Margin = new Thickness(5),
                 Padding = new Thickness(10),
-                Background = new SolidColorBrush(ColorHelper.FromArgb(255, 111, 79, 110))
+                Background = isAddCard
+                    ? new SolidColorBrush(ColorHelper.FromArgb(255, 234, 178, 178)) // Add Note card color (peach/pink)
+                    : new SolidColorBrush(ColorHelper.FromArgb(255, 111, 79, 110)),  // Default note color
+                CornerRadius = new CornerRadius(5)
             };
 
-            // Add title or main text
             var titleText = new TextBlock
             {
                 Text = title,
                 FontWeight = Microsoft.UI.Text.FontWeights.Bold,
                 FontSize = 16,
+                Foreground = isAddCard ? new SolidColorBrush(Colors.Black) : new SolidColorBrush(Colors.White), // Black for Add Note, white for others
                 Margin = new Thickness(0, 0, 0, 5),
                 HorizontalAlignment = isAddCard ? HorizontalAlignment.Center : HorizontalAlignment.Left,
                 TextWrapping = TextWrapping.Wrap
             };
             card.Children.Add(titleText);
 
-            // Add description for note cards (skip for Add Note card)
             if (!isAddCard)
             {
                 var descriptionText = new TextBlock
                 {
                     Text = description,
                     TextWrapping = TextWrapping.Wrap,
+                    Foreground = new SolidColorBrush(Colors.White), // White for regular note description
                     MaxLines = 2,
                     TextTrimming = TextTrimming.CharacterEllipsis,
+                    Visibility = string.IsNullOrWhiteSpace(description) ? Visibility.Collapsed : Visibility.Visible
                 };
                 card.Children.Add(descriptionText);
             }
 
-            // Wrap the card in a Border to handle click events
-            var border = new Border
-            {
-                Child = card,
-                CornerRadius = new CornerRadius(5),
-                BorderThickness = new Thickness(1),
-                BorderBrush = new SolidColorBrush(Color.FromArgb(255, 100, 100, 100))
-            };
+            card.PointerReleased += (s, e) => onClick();
 
-            // Assign click/tap behavior
-            border.PointerReleased += (s, e) => onClick();
-
-            return border;
+            return card;
         }
 
         private void ShowNoteDetails(Note note)
