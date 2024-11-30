@@ -51,34 +51,34 @@
         </ScrollViewer>
 
         <!-- Save and Cancel Buttons (Horizontal Layout) -->
-        <Grid Grid.Row="2" Margin="10" ColumnDefinitions="*,*">
+        <Grid Grid.Row="2" ColumnDefinitions="*,*">
             <!-- Save Button -->
             <Button
-        x:Name="SaveButton"
-        Content="Save"
-        Click="SaveNote_Click"
-        HorizontalAlignment="Stretch"
-        VerticalAlignment="Stretch"
-        MinHeight="50"
-        Background="Yellow"
-        Foreground="Black"
-        FontWeight="Bold"
-        Grid.Column="0"
-        Margin="5" />
+                x:Name="SaveButton"
+                Content="Save"
+                Click="SaveNote_Click"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                MinHeight="50"
+                Background="Yellow"
+                Foreground="Black"
+                FontWeight="Bold"
+                Grid.Column="0"
+                Margin="10,0,5,0" />
 
             <!-- Cancel Button -->
             <Button
-        x:Name="CancelButton"
-        Content="Cancel"
-        Click="CancelNote_Click"
-        HorizontalAlignment="Stretch"
-        VerticalAlignment="Stretch"
-        MinHeight="50"
-        Background="Gray"
-        Foreground="White"
-        FontWeight="Bold"
-        Grid.Column="1"
-        Margin="5" />
+                x:Name="CancelButton"
+                Content="Cancel"
+                Click="CancelNote_Click"
+                HorizontalAlignment="Stretch"
+                VerticalAlignment="Stretch"
+                MinHeight="50"
+                Background="Gray"
+                Foreground="White"
+                FontWeight="Bold"
+                Grid.Column="1"
+                Margin="5,0,10,0" />
         </Grid>
 
         <!-- Delete Button (Separate Row) -->
