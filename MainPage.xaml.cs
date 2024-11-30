@@ -1,7 +1,6 @@
 ﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.UI;
-using Shapes = Microsoft.UI.Xaml.Shapes;
 using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
@@ -13,6 +12,9 @@ using Microsoft.UI.Xaml.Media.Imaging;
 using System.Threading.Tasks;
 using Microsoft.UI.Text;
 using System.Diagnostics;
+using Microsoft.UI.Input;
+using Windows.ApplicationModel.DataTransfer;
+using System.Linq;
 
 namespace InStelle
 {
@@ -30,10 +32,6 @@ namespace InStelle
         public MainPage()
         {
             this.InitializeComponent();
-
-            // Set up main window appearance via a Grid or root element
-            var rootGrid = (Grid)this.Content;
-
             LoadTabs();
         }
 
@@ -47,27 +45,17 @@ namespace InStelle
                 Stretch = Stretch.UniformToFill
             };
 
-            // Create a horizontal bar (Rectangle) for selection indication
-            var selectionBar = new Shapes.Rectangle
-            {
-                Height = 10,
-                Fill = new SolidColorBrush(ColorHelper.FromArgb(255, 201, 99, 110)), // Red Accent
-                Visibility = Visibility.Collapsed // Hidden by default
-            };
-
             var stackPanel = new StackPanel
             {
                 Orientation = Orientation.Vertical,
                 Width = 100,
+                Padding = new Thickness(0, 0, 0, 5),
                 Margin = new Thickness(5),
-                Tag = tab,
-                Background = new SolidColorBrush(ColorHelper.FromArgb(255, 211, 129, 131)), // Red accent
+                Background = new SolidColorBrush(ColorHelper.FromArgb(255, 201, 99, 110)), // Default tab background
+                Tag = tab // Directly store TabData in the Tag property
             };
 
             stackPanel.Children.Add(image);
-            stackPanel.Children.Add(selectionBar);
-
-            // Click behavior to activate tab
             stackPanel.PointerPressed += (s, e) => SetActiveTab(tab);
 
             // Context menu for Edit and Delete
@@ -83,10 +71,25 @@ namespace InStelle
 
             stackPanel.ContextFlyout = menuFlyout;
 
-            // Store the selection bar in the stack panel's Tag for easier access later
-            stackPanel.Tag = new Tuple<TabData, Shapes.Rectangle>(tab, selectionBar);
-
             return stackPanel;
+        }
+
+        private void SetActiveTab(TabData tab)
+        {
+            currentTab = tab;
+
+            // Update all tab buttons
+            foreach (var child in TabPanel.Children)
+            {
+                if (child is StackPanel tabPanel && tabPanel.Tag is TabData buttonTab)
+                {
+                    tabPanel.Background = buttonTab == currentTab
+                        ? new SolidColorBrush(ColorHelper.FromArgb(255, 246, 239, 223)) // Active tab background
+                        : new SolidColorBrush(ColorHelper.FromArgb(255, 201, 99, 110)); // Inactive tab background
+                }
+            }
+
+            RefreshNotes();
         }
 
         public async void AddTab_Click(object sender, RoutedEventArgs e)
@@ -122,6 +125,77 @@ namespace InStelle
                 }
 
                 SaveTabs();
+            }
+        }
+
+        private void DeleteTab(TabData tab, StackPanel stackPanel)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(tab.Icon) && File.Exists(tab.Icon))
+                {
+                    File.Delete(tab.Icon);
+                }
+
+                tabs.Remove(tab);
+                TabPanel.Children.Remove(stackPanel);
+
+                if (currentTab == tab)
+                {
+                    currentTab = tabs.Count > 0 ? tabs[0] : null;
+                    RefreshNotes();
+                }
+
+                SaveTabs();
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to delete tab: {ex.Message}");
+            }
+        }
+
+        private void SaveTabs()
+        {
+            try
+            {
+                var json = JsonSerializer.Serialize(tabs);
+                File.WriteAllText(savePath, json);
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to save tabs: {ex.Message}");
+            }
+        }
+
+        private void LoadTabs()
+        {
+            try
+            {
+                if (File.Exists(savePath))
+                {
+                    var json = File.ReadAllText(savePath);
+                    var loadedTabs = JsonSerializer.Deserialize<List<TabData>>(json);
+
+                    if (loadedTabs != null)
+                    {
+                        tabs.AddRange(loadedTabs);
+
+                        foreach (var tab in tabs)
+                        {
+                            var tabStackPanel = CreateTabStackPanel(tab);
+                            TabPanel.Children.Insert(TabPanel.Children.Count - 1, tabStackPanel);
+                        }
+
+                        if (tabs.Count > 0)
+                        {
+                            SetActiveTab(tabs[0]);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to load tabs: {ex.Message}");
             }
         }
 
@@ -262,75 +336,6 @@ namespace InStelle
             return imagePath;
         }
 
-        private void DeleteTab(TabData tab, StackPanel stackPanel)
-        {
-            try
-            {
-                if (!string.IsNullOrWhiteSpace(tab.Icon) && File.Exists(tab.Icon))
-                {
-                    File.Delete(tab.Icon);
-                }
-
-                tabs.Remove(tab);
-                TabPanel.Children.Remove(stackPanel);
-
-                if (currentTab == tab)
-                {
-                    currentTab = tabs.Count > 0 ? tabs[0] : null;
-                    RefreshNotes();
-                }
-
-                SaveTabs();
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Failed to delete tab: {ex.Message}");
-            }
-        }
-
-        private void SetActiveTab(TabData tab)
-        {
-            currentTab = tab;
-
-            // Update all tab buttons
-            foreach (var child in TabPanel.Children)
-            {
-                if (child is Button tabButton && tabButton.Tag is Tuple<TabData, Shapes.Rectangle> tagData)
-                {
-                    var buttonTab = tagData.Item1;
-                    var selectionBar = tagData.Item2;
-
-                    if (buttonTab == currentTab)
-                    {
-                        selectionBar.Visibility = Visibility.Visible; // Show bar for active tab
-                        tabButton.Background = new SolidColorBrush(ColorHelper.FromArgb(255, 211, 129, 131)); // Active tab color
-                    }
-                    else
-                    {
-                        selectionBar.Visibility = Visibility.Collapsed; // Hide bar for inactive tabs
-                        tabButton.Background = new SolidColorBrush(ColorHelper.FromArgb(255, 201, 99, 110)); // Inactive tab color
-                    }
-                }
-            }
-
-            RefreshNotes();
-        }
-
-        private void RefreshNotes()
-        {
-            NotesPanel.Children.Clear();
-            if (currentTab == null) return;
-
-            // Add note cards
-            foreach (var note in currentTab.Notes)
-            {
-                NotesPanel.Children.Add(CreateCard(note.Title, note.Description, () => ShowNoteDetails(note)));
-            }
-
-            // Add the "Add Note" card
-            NotesPanel.Children.Add(CreateCard("+ Add Note", "", () => AddNote_Click(this, new RoutedEventArgs()), isAddCard: true));
-        }
-
         public void AddNote_Click(object sender, RoutedEventArgs e)
         {
             if (currentTab == null) return;
@@ -344,7 +349,6 @@ namespace InStelle
             Frame.Navigate(typeof(NotePage), Tuple.Create(newNote, currentTab, RefreshNotes, SaveTabs));
         }
 
-
         private void ShowNoteDetails(Note note)
         {
             if (currentTab == null) return;
@@ -356,29 +360,36 @@ namespace InStelle
             Frame.Navigate(typeof(NotePage), Tuple.Create(note, currentTab, RefreshNotes, SaveTabs));
         }
 
-        private Button CreateCard(string title, string description, Action onClick, bool isAddCard = false)
+        private UIElement CreateCard(string title, string description, Action onClick, bool isAddCard = false)
         {
-            var card = new Button
+            var cardGrid = new Grid
             {
                 Margin = new Thickness(5),
-                Padding = new Thickness(10),
                 Background = isAddCard
-                    ? new SolidColorBrush(ColorHelper.FromArgb(255, 234, 178, 178)) // Add Note card color (peach/pink)
-                    : new SolidColorBrush(ColorHelper.FromArgb(255, 111, 79, 110)),  // Default note color
+                    ? new SolidColorBrush(ColorHelper.FromArgb(255, 234, 178, 178)) // Add Note card color
+                    : new SolidColorBrush(ColorHelper.FromArgb(255, 111, 79, 110)), // Default note color
                 CornerRadius = new CornerRadius(5),
-                BorderThickness = new Thickness(0), // Optional: remove border
-                HorizontalAlignment = HorizontalAlignment.Stretch, // Ensures the button stretches widthwise
-                VerticalAlignment = VerticalAlignment.Stretch,
-                HorizontalContentAlignment = HorizontalAlignment.Stretch, // Ensures content alignment
-                VerticalContentAlignment = VerticalAlignment.Stretch
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch
             };
 
-            // Use a StackPanel as the content of the button to stack the TextBlock elements
-            var contentPanel = new StackPanel
+            // Determine final title and description based on input
+            if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(description))
             {
-                Orientation = Orientation.Vertical,
-                HorizontalAlignment = HorizontalAlignment.Stretch, // Ensures the panel stretches with the button
-                VerticalAlignment = VerticalAlignment.Stretch
+                title = "EagleStelle";
+            }
+            else if (string.IsNullOrWhiteSpace(title))
+            {
+                title = description;
+                description = string.Empty;
+            }
+
+            // Left section for showing details
+            var detailArea = new StackPanel
+            {
+                Margin = new Thickness(0),
+                Padding = new Thickness(10, 10, 40, 10), // Reserve space for drag area on the right
+                Orientation = Orientation.Vertical
             };
 
             var titleText = new TextBlock
@@ -393,7 +404,7 @@ namespace InStelle
                 TextWrapping = TextWrapping.Wrap,
                 Visibility = string.IsNullOrWhiteSpace(title) ? Visibility.Collapsed : Visibility.Visible
             };
-            contentPanel.Children.Add(titleText);
+            detailArea.Children.Add(titleText);
 
             var descriptionText = new TextBlock
             {
@@ -405,62 +416,151 @@ namespace InStelle
                 FontWeight = string.IsNullOrWhiteSpace(title) ? Microsoft.UI.Text.FontWeights.Bold : Microsoft.UI.Text.FontWeights.Normal,
                 FontSize = string.IsNullOrWhiteSpace(title) ? 16 : 14,
                 Visibility = string.IsNullOrWhiteSpace(description) ? Visibility.Collapsed : Visibility.Visible,
-                HorizontalAlignment = HorizontalAlignment.Left // Aligns the description to the left
             };
-            contentPanel.Children.Add(descriptionText);
+            detailArea.Children.Add(descriptionText);
 
-            // Set the StackPanel as the content of the Button
-            card.Content = contentPanel;
-
-            // Add click event
-            card.Click += (s, e) => onClick();
-
-            return card;
-        }
-
-        private void SaveTabs()
-        {
-            try
+            detailArea.PointerPressed += (s, e) =>
             {
-                var json = JsonSerializer.Serialize(tabs);
-                File.WriteAllText(savePath, json);
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Failed to save tabs: {ex.Message}");
-            }
-        }
-
-        private void LoadTabs()
-        {
-            try
-            {
-                if (File.Exists(savePath))
+                if (e.GetCurrentPoint(detailArea).Properties.IsLeftButtonPressed && !e.Handled)
                 {
-                    var json = File.ReadAllText(savePath);
-                    var loadedTabs = JsonSerializer.Deserialize<List<TabData>>(json);
+                    e.Handled = true; // Prevent propagation
+                    onClick();
+                }
+            };
 
-                    if (loadedTabs != null)
-                    {
-                        tabs.AddRange(loadedTabs);
 
-                        foreach (var tab in tabs)
-                        {
-                            var tabStackPanel = CreateTabStackPanel(tab);
-                            TabPanel.Children.Insert(TabPanel.Children.Count - 1, tabStackPanel);
-                        }
+            // Right section for drag-and-drop
+            var dragArea = new Grid
+            {
+                Width = 30,
+                Background = new SolidColorBrush(ColorHelper.FromArgb(50, 255, 255, 255)), // Semi-transparent background
+                HorizontalAlignment = HorizontalAlignment.Right,
+                VerticalAlignment = VerticalAlignment.Stretch,
+                AllowDrop = true // Enable drop
+            };
 
-                        if (tabs.Count > 0)
-                        {
-                            SetActiveTab(tabs[0]);
-                        }
-                    }
+            // Change cursor to indicate drag area (requires Pointer event handlers)
+            dragArea.PointerEntered += (s, e) =>
+            {
+                var coreWindow = Microsoft.UI.Xaml.Window.Current?.CoreWindow;
+                if (coreWindow != null)
+                {
+                    coreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.SizeAll, 1);
+                }
+            };
+            dragArea.PointerExited += (s, e) =>
+            {
+                var coreWindow = Microsoft.UI.Xaml.Window.Current?.CoreWindow;
+                if (coreWindow != null)
+                {
+                    coreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.Arrow, 1);
+                }
+            };
+
+            // Enable drag-and-drop for the right area
+            dragArea.CanDrag = !isAddCard;
+            dragArea.DragStarting += (s, e) =>
+            {
+                if (string.IsNullOrWhiteSpace(title))
+                {
+                    e.Cancel = true; // Cancel drag for empty titles
+                    return;
+                }
+
+                Debug.WriteLine($"DragStarting: {title}");
+                e.Data.SetText(title);
+                e.Data.RequestedOperation = DataPackageOperation.Move;
+            };
+
+            dragArea.DragOver += (s, e) =>
+            {
+                e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Move;
+                dragArea.Background = new SolidColorBrush(ColorHelper.FromArgb(100, 0, 255, 0)); // Highlight during drag
+            };
+
+            dragArea.DragLeave += (s, e) =>
+            {
+                dragArea.Background = new SolidColorBrush(ColorHelper.FromArgb(50, 255, 255, 255)); // Reset background
+            };
+
+            dragArea.Drop += async (s, e) =>
+            {
+                Debug.WriteLine("Drop event triggered.");
+                if (e.DataView.Contains(StandardDataFormats.Text))
+                {
+                    var droppedTitle = await e.DataView.GetTextAsync();
+                    Debug.WriteLine($"Dropped Title: {droppedTitle}, Target Title: {title}");
+                    ReorderCards(droppedTitle, title);
+                }
+            };
+
+            // Add both areas to the main grid
+            cardGrid.Children.Add(detailArea);
+            cardGrid.Children.Add(dragArea);
+
+            return cardGrid;
+        }
+
+        private void ReorderCards(string sourceTitle, string targetTitle)
+        {
+            if (currentTab == null) return;
+
+            Debug.WriteLine($"Reordering: {sourceTitle} -> {targetTitle}");
+
+            // Find source and target notes
+            var sourceNote = currentTab.Notes.Find(n => n.Title == sourceTitle);
+            var targetNote = currentTab.Notes.Find(n => n.Title == targetTitle);
+
+            if (sourceNote == null)
+            {
+                Debug.WriteLine("Source note not found.");
+                return;
+            }
+
+            if (targetNote == null)
+            {
+                Debug.WriteLine("Target note not found.");
+                // If the target is invalid, add sourceNote to the end of the list
+                currentTab.Notes.Remove(sourceNote);
+                currentTab.Notes.Add(sourceNote);
+            }
+            else
+            {
+                // Remove the source note and reinsert it at the target's index
+                currentTab.Notes.Remove(sourceNote);
+                var targetIndex = currentTab.Notes.IndexOf(targetNote);
+
+                if (targetIndex < 0 || targetIndex > currentTab.Notes.Count)
+                {
+                    Debug.WriteLine("Invalid target index.");
+                    currentTab.Notes.Add(sourceNote); // Add to the end if the index is invalid
+                }
+                else
+                {
+                    currentTab.Notes.Insert(targetIndex, sourceNote);
                 }
             }
-            catch (Exception ex)
+
+            Debug.WriteLine($"Updated order: {string.Join(", ", currentTab.Notes.Select(n => n.Title))}");
+
+            // Refresh the UI to reflect the new order
+            RefreshNotes();
+            SaveTabs();
+        }
+        private void RefreshNotes()
+        {
+            NotesPanel.Children.Clear();
+            if (currentTab == null)
             {
-                ShowError($"Failed to load tabs: {ex.Message}");
+                return;
             }
+
+            foreach (var note in currentTab.Notes)
+            {
+                NotesPanel.Children.Add(CreateCard(note.Title, note.Description, () => ShowNoteDetails(note)));
+            }
+
+            NotesPanel.Children.Add(CreateCard("+ Add Note", "", () => AddNote_Click(this, new RoutedEventArgs()), isAddCard: true));
         }
 
         private async void ShowError(string message)
@@ -503,7 +603,9 @@ namespace InStelle
 
     public class Note
     {
+        public string Id { get; set; } = Guid.NewGuid().ToString(); // Unique identifier
         public string Title { get; set; } = string.Empty;
         public string Description { get; set; } = string.Empty;
     }
+
 }
