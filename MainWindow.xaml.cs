@@ -1,5 +1,7 @@
-﻿using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Input;
+using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -65,14 +67,15 @@ namespace InStelle
 
             foreach (var note in currentTab.Notes)
             {
-                NotesPanel.Children.Add(CreateNoteButton(note));
+                NotesPanel.Children.Add(CreateNoteCard(note));
             }
 
             var addNoteButton = new Button
             {
-                Content = "+",
-                Width = 100,
+                Content = "+ Add Note",
+                Width = 200,
                 Height = 50,
+                Margin = new Thickness(5)
             };
             addNoteButton.Click += AddNote_Click;
             NotesPanel.Children.Add(addNoteButton);
@@ -82,36 +85,86 @@ namespace InStelle
         {
             if (currentTab == null) return;
 
-            var newNote = $"Note {currentTab.Notes.Count + 1}";
-            currentTab.Notes.Add(newNote);
+            // Create a new note instance (but don't add it to the tab yet)
+            var newNote = new Note
+            {
+            };
 
-            NotesPanel.Children.Insert(NotesPanel.Children.Count - 1, CreateNoteButton(newNote));
-            SaveTabs();
+            // Create the NoteWindow and pass the note
+            var noteWindow = new NoteWindow(newNote, currentTab, RefreshNotes, SaveTabs);
+
+            // Handle the closing of the NoteWindow
+            noteWindow.Closed += (s, args) =>
+            {
+                // Only add the note if it was saved
+                if (noteWindow.NoteSaved)
+                {
+                    currentTab.Notes.Add(newNote);
+                    RefreshNotes();
+                    SaveTabs();
+                }
+            };
+
+            // Open the NoteWindow
+            noteWindow.Activate();
         }
 
-        private Button CreateNoteButton(string note)
+
+        private Border CreateNoteCard(Note note)
         {
-            var button = new Button
+            var card = new StackPanel
             {
-                Content = note,
-                Width = 200,
-                Height = 50,
-                Margin = new Thickness(5)
+                Orientation = Orientation.Vertical,
+                Margin = new Thickness(5),
+                Padding = new Thickness(10),
+                Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LightGray),
             };
-            button.Click += (s, e) => OpenNoteDialog(note);
-            return button;
+
+            // Title: Bold and larger text
+            var title = new TextBlock
+            {
+                Text = note.Title,
+                FontWeight = Microsoft.UI.Text.FontWeights.Bold,
+                FontSize = 16, // Slightly larger
+                Margin = new Thickness(0, 0, 0, 5)
+            };
+
+            // Description with truncation
+            var description = new TextBlock
+            {
+                Text = note.Description,
+                TextWrapping = TextWrapping.Wrap,
+                MaxLines = 2, // Limit to 2 lines
+                TextTrimming = TextTrimming.CharacterEllipsis // Add ellipsis for overflowed text
+            };
+
+            // Wrap the card in a Border to handle click events
+            var noteCard = new Border
+            {
+                Child = card,
+                CornerRadius = new CornerRadius(5),
+                BorderThickness = new Thickness(1),
+                BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray)
+            };
+
+            // Handle click to view note details
+            noteCard.Tapped += (s, e) => ShowNoteDetails(note);
+
+            // Add elements to the card
+            card.Children.Add(title);
+            card.Children.Add(description);
+
+            return noteCard;
         }
 
-        private async void OpenNoteDialog(string note)
+
+        private void ShowNoteDetails(Note note)
         {
-            var dialog = new ContentDialog
-            {
-                Title = "Note",
-                Content = note,
-                CloseButtonText = "Close",
-                XamlRoot = this.Content.XamlRoot
-            };
-            await dialog.ShowAsync();
+            if (currentTab == null)
+                return;
+
+            var noteWindow = new NoteWindow(note, currentTab, RefreshNotes, SaveTabs);
+            noteWindow.Activate(); // Show the window
         }
 
         private void SaveTabs()
@@ -176,12 +229,18 @@ namespace InStelle
     public class TabData
     {
         public string Icon { get; set; }
-        public List<string> Notes { get; set; }
+        public List<Note> Notes { get; set; }
 
         public TabData(string icon)
         {
             Icon = icon ?? throw new ArgumentNullException(nameof(icon));
-            Notes = new List<string>();
+            Notes = new List<Note>();
         }
+    }
+
+    public class Note
+    {
+        public string Title { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
     }
 }
