@@ -1,17 +1,18 @@
-﻿using Microsoft.UI.Input;
-using Microsoft.UI.Xaml;
+﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Windows.UI;
 using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
+using Microsoft.UI;
 
 namespace InStelle
 {
     public sealed partial class MainWindow : Window
     {
-        private List<TabData> tabs = new();
+        private readonly List<TabData> tabs = new();
         private TabData? currentTab = null;
         private static readonly string savePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
@@ -22,6 +23,10 @@ namespace InStelle
         public MainWindow()
         {
             this.InitializeComponent();
+
+            // Set up main window appearance via a Grid or root element
+            var rootGrid = (Grid)this.Content;
+
             LoadTabs();
         }
 
@@ -48,7 +53,9 @@ namespace InStelle
                 Width = 50,
                 Height = 50,
                 Margin = new Thickness(5),
-                Tag = tab
+                Tag = tab,
+                Background = new SolidColorBrush(ColorHelper.FromArgb(255, 201, 99, 110)), // Red accent
+                Foreground = new SolidColorBrush(ColorHelper.FromArgb(255, 81, 53, 89)) // Darker purple
             };
             button.Click += (s, e) => SetActiveTab(tab);
             return button;
@@ -65,38 +72,25 @@ namespace InStelle
             NotesPanel.Children.Clear();
             if (currentTab == null) return;
 
+            // Add note cards
             foreach (var note in currentTab.Notes)
             {
-                NotesPanel.Children.Add(CreateNoteCard(note));
+                NotesPanel.Children.Add(CreateCard(note.Title, note.Description, () => ShowNoteDetails(note)));
             }
 
-            var addNoteButton = new Button
-            {
-                Content = "+ Add Note",
-                Width = 200,
-                Height = 50,
-                Margin = new Thickness(5)
-            };
-            addNoteButton.Click += AddNote_Click;
-            NotesPanel.Children.Add(addNoteButton);
+            // Add the "Add Note" card
+            NotesPanel.Children.Add(CreateCard("+ Add Note", "", () => AddNote_Click(null, null), isAddCard: true));
         }
 
-        private void AddNote_Click(object sender, RoutedEventArgs e)
+        private void AddNote_Click(object? sender, RoutedEventArgs? e)
         {
             if (currentTab == null) return;
 
-            // Create a new note instance (but don't add it to the tab yet)
-            var newNote = new Note
-            {
-            };
-
-            // Create the NoteWindow and pass the note
+            var newNote = new Note();
             var noteWindow = new NoteWindow(newNote, currentTab, RefreshNotes, SaveTabs);
 
-            // Handle the closing of the NoteWindow
             noteWindow.Closed += (s, args) =>
             {
-                // Only add the note if it was saved
                 if (noteWindow.NoteSaved)
                 {
                     currentTab.Notes.Add(newNote);
@@ -105,58 +99,59 @@ namespace InStelle
                 }
             };
 
-            // Open the NoteWindow
-            noteWindow.Activate();
+            // Delay the activation to ensure proper z-order
+            DispatcherQueue.TryEnqueue(() => noteWindow.Activate());
         }
 
-
-        private Border CreateNoteCard(Note note)
+        private Border CreateCard(string title, string description, Action onClick, bool isAddCard = false)
         {
             var card = new StackPanel
             {
                 Orientation = Orientation.Vertical,
                 Margin = new Thickness(5),
                 Padding = new Thickness(10),
-                Background = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.LightGray),
+                Background = new SolidColorBrush(ColorHelper.FromArgb(255, 111, 79, 110))
             };
 
-            // Title: Bold and larger text
-            var title = new TextBlock
+            // Add title or main text
+            var titleText = new TextBlock
             {
-                Text = note.Title,
+                Text = title,
                 FontWeight = Microsoft.UI.Text.FontWeights.Bold,
-                FontSize = 16, // Slightly larger
-                Margin = new Thickness(0, 0, 0, 5)
+                FontSize = 16,
+                Margin = new Thickness(0, 0, 0, 5),
+                HorizontalAlignment = isAddCard ? HorizontalAlignment.Center : HorizontalAlignment.Left,
+                TextWrapping = TextWrapping.Wrap
             };
+            card.Children.Add(titleText);
 
-            // Description with truncation
-            var description = new TextBlock
+            // Add description for note cards (skip for Add Note card)
+            if (!isAddCard)
             {
-                Text = note.Description,
-                TextWrapping = TextWrapping.Wrap,
-                MaxLines = 2, // Limit to 2 lines
-                TextTrimming = TextTrimming.CharacterEllipsis // Add ellipsis for overflowed text
-            };
+                var descriptionText = new TextBlock
+                {
+                    Text = description,
+                    TextWrapping = TextWrapping.Wrap,
+                    MaxLines = 2,
+                    TextTrimming = TextTrimming.CharacterEllipsis,
+                };
+                card.Children.Add(descriptionText);
+            }
 
             // Wrap the card in a Border to handle click events
-            var noteCard = new Border
+            var border = new Border
             {
                 Child = card,
                 CornerRadius = new CornerRadius(5),
                 BorderThickness = new Thickness(1),
-                BorderBrush = new Microsoft.UI.Xaml.Media.SolidColorBrush(Microsoft.UI.Colors.Gray)
+                BorderBrush = new SolidColorBrush(Color.FromArgb(255, 100, 100, 100))
             };
 
-            // Handle click to view note details
-            noteCard.Tapped += (s, e) => ShowNoteDetails(note);
+            // Assign click/tap behavior
+            border.PointerReleased += (s, e) => onClick();
 
-            // Add elements to the card
-            card.Children.Add(title);
-            card.Children.Add(description);
-
-            return noteCard;
+            return border;
         }
-
 
         private void ShowNoteDetails(Note note)
         {
@@ -165,6 +160,9 @@ namespace InStelle
 
             var noteWindow = new NoteWindow(note, currentTab, RefreshNotes, SaveTabs);
             noteWindow.Activate(); // Show the window
+
+            // Delay the activation to ensure proper z-order
+            DispatcherQueue.TryEnqueue(() => noteWindow.Activate());
         }
 
         private void SaveTabs()
@@ -191,7 +189,7 @@ namespace InStelle
 
                     if (loadedTabs != null)
                     {
-                        tabs = loadedTabs;
+                        tabs.AddRange(loadedTabs);
 
                         foreach (var tab in tabs)
                         {
@@ -209,7 +207,6 @@ namespace InStelle
             catch (Exception ex)
             {
                 ShowError($"Failed to load tabs: {ex.Message}");
-                tabs = new List<TabData>();
             }
         }
 

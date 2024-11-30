@@ -6,25 +6,25 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
     Title="Note Taking App">
-    <Grid>
-        <!-- Main Layout -->
+
+    <!-- Root Grid -->
+    <Grid Background="#2D1E37">
         <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="100"/>
-            <!-- Bottom Bar for Tabs -->
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Content Area -->
+        <!-- Scrollable Content Area -->
         <ScrollViewer x:Name="ContentArea" Grid.Row="0" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-            <StackPanel x:Name="NotesPanel" Orientation="Vertical" Margin="10"/>
+            <StackPanel x:Name="NotesPanel" Orientation="Vertical" Margin="10" />
         </ScrollViewer>
 
         <!-- Bottom Tab Bar -->
-        <Border Grid.Row="1" Background="Orange">
+        <Border Grid.Row="1" Background="#654062">
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="TabPanel" Orientation="Horizontal">
                     <!-- Add Button for Tabs -->
-                    <Button x:Name="AddTabButton" Content="+" Width="50" Height="50" Background="Pink" Click="AddTab_Click"/>
+                    <Button x:Name="AddTabButton" Content="+" Background="#F6C5B8" Foreground="#2D1E37" Height="50" Width="50" Click="AddTab_Click" Margin="5"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>

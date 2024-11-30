@@ -7,7 +7,7 @@
     mc:Ignorable="d"
     Title="Note Details">
 
-    <Grid>
+    <Grid Background="#2D1E37">
         <!-- Define rows for title, description, and buttons -->
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
@@ -30,7 +30,9 @@
             HorizontalAlignment="Stretch"
             TextWrapping="Wrap"
             Padding="10"
-            BorderBrush="Gray"
+            Background="#654062"
+            Foreground="#F5E8D3"
+            BorderBrush="#F6C5B8"
             BorderThickness="1"
             Margin="10"
             VerticalAlignment="Top" />
@@ -46,7 +48,9 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 Padding="10"
-                BorderBrush="Gray"
+                Background="#654062"
+                Foreground="#F5E8D3"
+                BorderBrush="#F6C5B8"
                 BorderThickness="1" />
         </ScrollViewer>
 
@@ -60,8 +64,8 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 MinHeight="50"
-                Background="Yellow"
-                Foreground="Black"
+                Background="#F6C5B8"
+                Foreground="#2D1E37"
                 FontWeight="Bold"
                 Grid.Column="0"
                 Margin="10,0,5,0" />
@@ -74,8 +78,8 @@
                 HorizontalAlignment="Stretch"
                 VerticalAlignment="Stretch"
                 MinHeight="50"
-                Background="Gray"
-                Foreground="White"
+                Background="#39263C"
+                Foreground="#F5E8D3"
                 FontWeight="Bold"
                 Grid.Column="1"
                 Margin="5,0,10,0" />
@@ -90,8 +94,8 @@
             HorizontalAlignment="Stretch"
             Margin="10"
             MinHeight="50"
-            Background="Crimson"
-            Foreground="White"
+            Background="#D38183"
+            Foreground="#F5E8D3"
             FontWeight="Bold" />
     </Grid>
 </Window>
