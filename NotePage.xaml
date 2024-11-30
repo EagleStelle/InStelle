@@ -1,0 +1,80 @@
+<Page
+    x:Class="InStelle.NotePage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="#2D1E37">
+
+    <Grid>
+        <!-- Title TextBox -->
+        <TextBox
+            x:Name="TitleTextBox"
+            PlaceholderText="Enter title here..."
+            FontWeight="Bold"
+            FontSize="18"
+            Margin="10,10,10,0"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Top"
+            Background="#654062"
+            Foreground="#F5E8D3"
+            BorderBrush="#F6C5B8"
+            BorderThickness="1" />
+
+        <!-- Description TextBox -->
+        <TextBox
+            x:Name="DescriptionTextBox"
+            PlaceholderText="Enter description here..."
+            AcceptsReturn="True"
+            TextWrapping="Wrap"
+            Margin="10,60,10,60"
+            VerticalAlignment="Stretch"
+            HorizontalAlignment="Stretch"
+            Background="#654062"
+            Foreground="#F5E8D3"
+            BorderBrush="#F6C5B8"
+            BorderThickness="1" />
+
+        <!-- Bottom Buttons -->
+        <StackPanel
+            Orientation="Horizontal"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Bottom"
+            Margin="10,0,10,10">
+
+            <!-- Save Button -->
+            <Button
+                x:Name="SaveButton"
+                Content="Save"
+                Click="SaveNote_Click"
+                Margin="0,0,5,0"
+                HorizontalAlignment="Stretch"
+                Background="#F6C5B8"
+                Foreground="#2D1E37"
+                FontWeight="Bold" />
+
+            <!-- Cancel Button -->
+            <Button
+                x:Name="CancelButton"
+                Content="Cancel"
+                Click="CancelNote_Click"
+                Margin="5,0,5,0"
+                HorizontalAlignment="Stretch"
+                Background="#39263C"
+                Foreground="#F5E8D3"
+                FontWeight="Bold" />
+
+            <!-- Delete Button -->
+            <Button
+                x:Name="DeleteButton"
+                Content="Delete"
+                Click="DeleteNote_Click"
+                Margin="5,0,0,0"
+                HorizontalAlignment="Stretch"
+                Background="#B85450"
+                Foreground="#FFFFFF"
+                FontWeight="Bold" />
+        </StackPanel>
+    </Grid>
+</Page>
