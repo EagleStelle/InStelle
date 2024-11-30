@@ -8,13 +8,56 @@
     Background="#2D1E37">
 
     <Grid>
+        <!-- Button Row -->
+        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Top" Margin="10,10,10,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <!-- Left-Aligned Column -->
+                <ColumnDefinition Width="Auto" />
+                <!-- Right-Aligned Buttons -->
+            </Grid.ColumnDefinitions>
+
+            <!-- Cancel Button (Left-Aligned) -->
+            <Button
+                x:Name="CancelButton"
+                Content="Back"
+                Click="CancelNote_Click"
+                HorizontalAlignment="Left"
+                Background="#39263C"
+                Foreground="#F5E8D3"
+                FontWeight="Bold"
+                Margin="0,0,5,0"
+                Grid.Column="0" />
+
+            <!-- Save and Delete Buttons (Right-Aligned in a StackPanel) -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Grid.Column="1">
+                <Button
+                    x:Name="SaveButton"
+                    Content="Save"
+                    Click="SaveNote_Click"
+                    Background="#F6C5B8"
+                    Foreground="#2D1E37"
+                    FontWeight="Bold"
+                    Margin="0,0,5,0" />
+
+                <Button
+                    x:Name="DeleteButton"
+                    Content="Delete"
+                    Click="DeleteNote_Click"
+                    Background="#B85450"
+                    Foreground="#FFFFFF"
+                    FontWeight="Bold"
+                    Margin="5,0,0,0" />
+            </StackPanel>
+        </Grid>
+
         <!-- Title TextBox -->
         <TextBox
             x:Name="TitleTextBox"
             PlaceholderText="Enter title here..."
             FontWeight="Bold"
             FontSize="18"
-            Margin="10,10,10,0"
+            Margin="10,60,10,0"
             HorizontalAlignment="Stretch"
             VerticalAlignment="Top"
             Background="#654062"
@@ -28,53 +71,12 @@
             PlaceholderText="Enter description here..."
             AcceptsReturn="True"
             TextWrapping="Wrap"
-            Margin="10,60,10,60"
+            Margin="10,120,10,10"
             VerticalAlignment="Stretch"
             HorizontalAlignment="Stretch"
             Background="#654062"
             Foreground="#F5E8D3"
             BorderBrush="#F6C5B8"
             BorderThickness="1" />
-
-        <!-- Bottom Buttons -->
-        <StackPanel
-            Orientation="Horizontal"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Bottom"
-            Margin="10,0,10,10">
-
-            <!-- Save Button -->
-            <Button
-                x:Name="SaveButton"
-                Content="Save"
-                Click="SaveNote_Click"
-                Margin="0,0,5,0"
-                HorizontalAlignment="Stretch"
-                Background="#F6C5B8"
-                Foreground="#2D1E37"
-                FontWeight="Bold" />
-
-            <!-- Cancel Button -->
-            <Button
-                x:Name="CancelButton"
-                Content="Cancel"
-                Click="CancelNote_Click"
-                Margin="5,0,5,0"
-                HorizontalAlignment="Stretch"
-                Background="#39263C"
-                Foreground="#F5E8D3"
-                FontWeight="Bold" />
-
-            <!-- Delete Button -->
-            <Button
-                x:Name="DeleteButton"
-                Content="Delete"
-                Click="DeleteNote_Click"
-                Margin="5,0,0,0"
-                HorizontalAlignment="Stretch"
-                Background="#B85450"
-                Foreground="#FFFFFF"
-                FontWeight="Bold" />
-        </StackPanel>
     </Grid>
 </Page>
