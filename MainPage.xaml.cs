@@ -32,7 +32,7 @@ namespace InStelle
             LoadTabs();
         }
 
-        private void AddTab_Click(object sender, RoutedEventArgs e)
+        public void AddTab_Click(object sender, RoutedEventArgs e)
         {
             if (!Directory.Exists(Path.GetDirectoryName(savePath)))
                 Directory.CreateDirectory(Path.GetDirectoryName(savePath)!);
@@ -123,8 +123,6 @@ namespace InStelle
 
             SaveTabs(); // Save changes
         }
-
-
         private void SetActiveTab(TabData tab)
         {
             currentTab = tab;
@@ -135,8 +133,8 @@ namespace InStelle
                 if (tabButton.Tag is TabData buttonTab)
                 {
                     tabButton.Background = new SolidColorBrush(buttonTab == currentTab
-                        ? ColorHelper.FromArgb(255, 234, 178, 178) // Active tab color
-                        : ColorHelper.FromArgb(255, 211, 129, 131)); // Inactive tab color
+                        ? ColorHelper.FromArgb(255, 211, 129, 131) // Active tab color
+                        : ColorHelper.FromArgb(255, 201, 99, 110)); // Inactive tab color
                 }
             }
 
@@ -158,7 +156,7 @@ namespace InStelle
             NotesPanel.Children.Add(CreateCard("+ Add Note", "", () => AddNote_Click(this, new RoutedEventArgs()), isAddCard: true));
         }
 
-        private void AddNote_Click(object sender, RoutedEventArgs e)
+        public void AddNote_Click(object sender, RoutedEventArgs e)
         {
             if (currentTab == null) return;
 
@@ -183,17 +181,29 @@ namespace InStelle
             Frame.Navigate(typeof(NotePage), Tuple.Create(note, currentTab, RefreshNotes, SaveTabs));
         }
 
-        private StackPanel CreateCard(string title, string description, Action onClick, bool isAddCard = false)
+        private Button CreateCard(string title, string description, Action onClick, bool isAddCard = false)
         {
-            var card = new StackPanel
+            var card = new Button
             {
-                Orientation = Orientation.Vertical,
                 Margin = new Thickness(5),
                 Padding = new Thickness(10),
                 Background = isAddCard
                     ? new SolidColorBrush(ColorHelper.FromArgb(255, 234, 178, 178)) // Add Note card color (peach/pink)
                     : new SolidColorBrush(ColorHelper.FromArgb(255, 111, 79, 110)),  // Default note color
-                CornerRadius = new CornerRadius(5)
+                CornerRadius = new CornerRadius(5),
+                BorderThickness = new Thickness(0), // Optional: remove border
+                HorizontalAlignment = HorizontalAlignment.Stretch, // Ensures the button stretches widthwise
+                VerticalAlignment = VerticalAlignment.Stretch,
+                HorizontalContentAlignment = HorizontalAlignment.Stretch, // Ensures content alignment
+                VerticalContentAlignment = VerticalAlignment.Stretch
+            };
+
+            // Use a StackPanel as the content of the button to stack the TextBlock elements
+            var contentPanel = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                HorizontalAlignment = HorizontalAlignment.Stretch, // Ensures the panel stretches with the button
+                VerticalAlignment = VerticalAlignment.Stretch
             };
 
             var titleText = new TextBlock
@@ -202,12 +212,13 @@ namespace InStelle
                 FontWeight = Microsoft.UI.Text.FontWeights.Bold,
                 FontSize = 16,
                 Foreground = isAddCard ? new SolidColorBrush(Colors.Black) : new SolidColorBrush(Colors.White), // Black for Add Note, white for others
-                Margin = new Thickness(0, 0, 0, 5),
-                HorizontalAlignment = isAddCard ? HorizontalAlignment.Center : HorizontalAlignment.Left,
+                Margin = new Thickness(0, 0, 0, isAddCard ? 0 : 5), // No bottom margin for Add Note
+                HorizontalAlignment = isAddCard ? HorizontalAlignment.Center : HorizontalAlignment.Left, // Center for Add Note, left for others
+                TextAlignment = isAddCard ? TextAlignment.Center : TextAlignment.Left, // Center for Add Note, left for others
                 TextWrapping = TextWrapping.Wrap,
                 Visibility = string.IsNullOrWhiteSpace(title) ? Visibility.Collapsed : Visibility.Visible
             };
-            card.Children.Add(titleText);
+            contentPanel.Children.Add(titleText);
 
             var descriptionText = new TextBlock
             {
@@ -218,11 +229,16 @@ namespace InStelle
                 TextTrimming = string.IsNullOrWhiteSpace(title) ? TextTrimming.None : TextTrimming.CharacterEllipsis,
                 FontWeight = string.IsNullOrWhiteSpace(title) ? Microsoft.UI.Text.FontWeights.Bold : Microsoft.UI.Text.FontWeights.Normal,
                 FontSize = string.IsNullOrWhiteSpace(title) ? 16 : 14,
-                Visibility = string.IsNullOrWhiteSpace(description) ? Visibility.Collapsed : Visibility.Visible
+                Visibility = string.IsNullOrWhiteSpace(description) ? Visibility.Collapsed : Visibility.Visible,
+                HorizontalAlignment = HorizontalAlignment.Left // Aligns the description to the left
             };
-            card.Children.Add(descriptionText);
+            contentPanel.Children.Add(descriptionText);
 
-            card.PointerReleased += (s, e) => onClick();
+            // Set the StackPanel as the content of the Button
+            card.Content = contentPanel;
+
+            // Add click event
+            card.Click += (s, e) => onClick();
 
             return card;
         }
