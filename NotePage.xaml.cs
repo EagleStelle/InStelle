@@ -15,6 +15,7 @@ namespace InStelle
         public NotePage()
         {
             this.InitializeComponent();
+            this.Loaded += NotePage_Loaded;
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -29,6 +30,12 @@ namespace InStelle
             // Initialize UI with the note's data
             TitleTextBox.Text = _note.Title;
             DescriptionTextBox.Text = _note.Description;
+        }
+
+        private void NotePage_Loaded(object sender, RoutedEventArgs e)
+        {
+            // Focus the DescriptionTextBox programmatically
+            DescriptionTextBox.Focus(FocusState.Programmatic);
         }
 
         private void SaveNote_Click(object sender, RoutedEventArgs e)
