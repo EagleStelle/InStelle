@@ -1,6 +1,7 @@
 ﻿using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Windows.UI;
+using Shapes = Microsoft.UI.Xaml.Shapes;
 using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
@@ -8,6 +9,10 @@ using System.IO;
 using System.Text.Json;
 using Microsoft.UI;
 using Microsoft.UI.Xaml.Navigation;
+using Microsoft.UI.Xaml.Media.Imaging;
+using System.Threading.Tasks;
+using Microsoft.UI.Text;
+using System.Diagnostics;
 
 namespace InStelle
 {
@@ -32,109 +37,279 @@ namespace InStelle
             LoadTabs();
         }
 
-        public void AddTab_Click(object sender, RoutedEventArgs e)
+        private StackPanel CreateTabStackPanel(TabData tab)
         {
-            if (!Directory.Exists(Path.GetDirectoryName(savePath)))
-                Directory.CreateDirectory(Path.GetDirectoryName(savePath)!);
-
-            var newTab = new TabData("📄");
-            tabs.Add(newTab);
-
-            var tabButton = CreateTabButton(newTab);
-            TabPanel.Children.Insert(TabPanel.Children.Count - 1, tabButton);
-
-            SetActiveTab(newTab);
-            SaveTabs();
-        }
-
-        private Button CreateTabButton(TabData tab)
-        {
-            var button = new Button
+            var image = new Image
             {
-                Content = tab.Icon,
-                Width = 50,
-                Height = 50,
+                Source = new BitmapImage(new Uri(tab.Icon)),
+                Width = 100,
+                Height = 100,
+                Stretch = Stretch.UniformToFill
+            };
+
+            // Create a horizontal bar (Rectangle) for selection indication
+            var selectionBar = new Shapes.Rectangle
+            {
+                Height = 10,
+                Fill = new SolidColorBrush(ColorHelper.FromArgb(255, 201, 99, 110)), // Red Accent
+                Visibility = Visibility.Collapsed // Hidden by default
+            };
+
+            var stackPanel = new StackPanel
+            {
+                Orientation = Orientation.Vertical,
+                Width = 100,
                 Margin = new Thickness(5),
                 Tag = tab,
                 Background = new SolidColorBrush(ColorHelper.FromArgb(255, 211, 129, 131)), // Red accent
-                Foreground = new SolidColorBrush(ColorHelper.FromArgb(255, 81, 53, 89)) // Darker purple
             };
 
-            // Set click behavior to activate tab
-            button.Click += (s, e) => SetActiveTab(tab);
+            stackPanel.Children.Add(image);
+            stackPanel.Children.Add(selectionBar);
 
-            // Create the context menu
+            // Click behavior to activate tab
+            stackPanel.PointerPressed += (s, e) => SetActiveTab(tab);
+
+            // Context menu for Edit and Delete
             var menuFlyout = new MenuFlyout();
 
-            // Add Edit option
             var editMenuItem = new MenuFlyoutItem { Text = "Edit Tab" };
-            editMenuItem.Click += (s, e) => EditTab(tab, button);
+            editMenuItem.Click += (s, e) => EditTab(tab, stackPanel);
             menuFlyout.Items.Add(editMenuItem);
 
-            // Add Delete option
             var deleteMenuItem = new MenuFlyoutItem { Text = "Delete Tab" };
-            deleteMenuItem.Click += (s, e) => DeleteTab(tab, button);
+            deleteMenuItem.Click += (s, e) => DeleteTab(tab, stackPanel);
             menuFlyout.Items.Add(deleteMenuItem);
 
-            // Attach the context menu to the button
-            button.ContextFlyout = menuFlyout;
+            stackPanel.ContextFlyout = menuFlyout;
 
-            return button;
+            // Store the selection bar in the stack panel's Tag for easier access later
+            stackPanel.Tag = new Tuple<TabData, Shapes.Rectangle>(tab, selectionBar);
+
+            return stackPanel;
         }
 
-        private async void EditTab(TabData tab, Button button)
+        public async void AddTab_Click(object sender, RoutedEventArgs e)
         {
+            var dialog = await CreateTabDialog();
+
+            if (dialog.Result == ContentDialogResult.Primary && dialog.ImagePath != null)
+            {
+                var newTab = new TabData(dialog.ImagePath);
+                tabs.Add(newTab);
+
+                var tabButton = CreateTabStackPanel(newTab);
+                TabPanel.Children.Insert(TabPanel.Children.Count - 1, tabButton);
+
+                SetActiveTab(newTab);
+                SaveTabs();
+            }
+        }
+
+        private async void EditTab(TabData tab, StackPanel stackPanel)
+        {
+            var dialog = await CreateTabDialog(tab.Icon);
+
+            if (dialog.Result == ContentDialogResult.Primary && dialog.ImagePath != null)
+            {
+                tab.Icon = dialog.ImagePath;
+
+                // Update the image in the StackPanel
+                var image = stackPanel.Children[0] as Image;
+                if (image != null)
+                {
+                    image.Source = new BitmapImage(new Uri(tab.Icon));
+                }
+
+                SaveTabs();
+            }
+        }
+
+        private async Task<(ContentDialogResult Result, string? ImagePath)> CreateTabDialog(string? existingImagePath = null)
+        {
+            string? selectedImagePath = existingImagePath;
+            Windows.Storage.StorageFile? droppedImageFile = null;
+
             var dialog = new ContentDialog
             {
-                Title = "Edit Tab",
                 XamlRoot = this.Content.XamlRoot,
                 CloseButtonText = "Cancel",
                 PrimaryButtonText = "Save"
             };
 
-            // Input fields for icon and name
-            var stackPanel = new StackPanel();
-            var iconBox = new TextBox { PlaceholderText = "Icon (e.g., 📄)", Text = tab.Icon };
-            stackPanel.Children.Add(new TextBlock { Text = "Icon:" });
-            stackPanel.Children.Add(iconBox);
+            // Create a centered title using a TextBlock
+            var titleTextBlock = new TextBlock
+            {
+                Text = "Tab Image",
+                FontSize = 24,
+                HorizontalAlignment = HorizontalAlignment.Center,
+                Margin = new Thickness(0, 20, 0, 10), // Add margins to adjust positioning
+                Foreground = new SolidColorBrush(ColorHelper.FromArgb(255, 211, 129, 131)) // Match the theme color
+            };
+
+            // Create the dialog content
+            var stackPanel = new StackPanel
+            {
+                VerticalAlignment = VerticalAlignment.Stretch,
+                HorizontalAlignment = HorizontalAlignment.Stretch
+            };
+
+            stackPanel.Children.Add(titleTextBlock);
+
+            var instructionText = new TextBlock
+            {
+                Text = "Drop an image here:",
+                Margin = new Thickness(0, 0, 0, 10),
+                HorizontalAlignment = HorizontalAlignment.Center
+            };
+            stackPanel.Children.Add(instructionText);
+
+            var dropArea = new Border
+            {
+                BorderBrush = new SolidColorBrush(ColorHelper.FromArgb(255, 211, 129, 131)),
+                BorderThickness = new Thickness(2),
+                Background = new SolidColorBrush(Colors.Transparent),
+                HorizontalAlignment = HorizontalAlignment.Stretch,
+                VerticalAlignment = VerticalAlignment.Stretch,
+                Margin = new Thickness(0, 0, 0, 10),
+                Height = 300, // Controls the square size (300px x 300px)
+                Width = 300,  // Keep it square
+                Child = new TextBlock
+                {
+                    Text = "Drop Image Here",
+                    HorizontalAlignment = HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    TextAlignment = TextAlignment.Center,
+                    FontSize = 16,
+                    Foreground = new SolidColorBrush(ColorHelper.FromArgb(255, 211, 129, 131)),
+                }
+            };
+
+            stackPanel.Children.Add(dropArea);
 
             dialog.Content = stackPanel;
 
+            // Event handling for image drop
+            dropArea.AllowDrop = true;
+
+            dropArea.DragEnter += (s, e) =>
+            {
+                e.AcceptedOperation = Windows.ApplicationModel.DataTransfer.DataPackageOperation.Copy;
+                dropArea.Background = new SolidColorBrush(ColorHelper.FromArgb(255, 234, 178, 178));
+            };
+
+            dropArea.DragLeave += (s, e) =>
+            {
+                dropArea.Background = new SolidColorBrush(Colors.Transparent);
+            };
+
+            dropArea.Drop += async (s, e) =>
+            {
+                if (e.DataView.Contains(Windows.ApplicationModel.DataTransfer.StandardDataFormats.StorageItems))
+                {
+                    var items = await e.DataView.GetStorageItemsAsync();
+                    if (items.Count > 0 && items[0] is Windows.Storage.StorageFile file &&
+                        (file.FileType == ".jpg" || file.FileType == ".png" || file.FileType == ".jpeg"))
+                    {
+                        droppedImageFile = file;
+                        dropArea.Child = new Image
+                        {
+                            Source = new BitmapImage(new Uri(file.Path)),
+                            Stretch = Stretch.UniformToFill, // Ensures image keeps its aspect ratio but fills the square
+                            HorizontalAlignment = HorizontalAlignment.Stretch,
+                            VerticalAlignment = VerticalAlignment.Stretch
+                        };
+                    }
+                }
+            };
+
             var result = await dialog.ShowAsync();
+
             if (result == ContentDialogResult.Primary)
             {
-                tab.Icon = iconBox.Text;
-                button.Content = tab.Icon; // Update the button's display
-                SaveTabs(); // Save changes
+                // Delete the previous image if it exists
+                if (!string.IsNullOrEmpty(existingImagePath) && File.Exists(existingImagePath))
+                {
+                    try
+                    {
+                        File.Delete(existingImagePath);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Error deleting old image: {ex.Message}");
+                    }
+                }
+
+                // Save the new image if one was dropped
+                if (droppedImageFile != null)
+                {
+                    selectedImagePath = await SaveImageToAppData(droppedImageFile);
+                }
             }
+
+            return (result, selectedImagePath);
         }
-        private void DeleteTab(TabData tab, Button button)
+
+        private async Task<string> SaveImageToAppData(Windows.Storage.StorageFile file)
         {
-            // Remove tab data and UI element
-            tabs.Remove(tab);
-            TabPanel.Children.Remove(button);
+            var appDataPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "InStelle");
+            Directory.CreateDirectory(appDataPath);
 
-            // Set a new active tab if the deleted tab was active
-            if (currentTab == tab)
-            {
-                currentTab = tabs.Count > 0 ? tabs[0] : null;
-                RefreshNotes();
-            }
+            var imagePath = Path.Combine(appDataPath, $"{Guid.NewGuid()}{file.FileType}");
+            await file.CopyAsync(await Windows.Storage.StorageFolder.GetFolderFromPathAsync(appDataPath),
+                Path.GetFileName(imagePath), Windows.Storage.NameCollisionOption.ReplaceExisting);
 
-            SaveTabs(); // Save changes
+            return imagePath;
         }
+
+        private void DeleteTab(TabData tab, StackPanel stackPanel)
+        {
+            try
+            {
+                if (!string.IsNullOrWhiteSpace(tab.Icon) && File.Exists(tab.Icon))
+                {
+                    File.Delete(tab.Icon);
+                }
+
+                tabs.Remove(tab);
+                TabPanel.Children.Remove(stackPanel);
+
+                if (currentTab == tab)
+                {
+                    currentTab = tabs.Count > 0 ? tabs[0] : null;
+                    RefreshNotes();
+                }
+
+                SaveTabs();
+            }
+            catch (Exception ex)
+            {
+                ShowError($"Failed to delete tab: {ex.Message}");
+            }
+        }
+
         private void SetActiveTab(TabData tab)
         {
             currentTab = tab;
 
-            // Optional: Add visual indication for the active tab
-            foreach (Button tabButton in TabPanel.Children)
+            // Update all tab buttons
+            foreach (var child in TabPanel.Children)
             {
-                if (tabButton.Tag is TabData buttonTab)
+                if (child is Button tabButton && tabButton.Tag is Tuple<TabData, Shapes.Rectangle> tagData)
                 {
-                    tabButton.Background = new SolidColorBrush(buttonTab == currentTab
-                        ? ColorHelper.FromArgb(255, 211, 129, 131) // Active tab color
-                        : ColorHelper.FromArgb(255, 201, 99, 110)); // Inactive tab color
+                    var buttonTab = tagData.Item1;
+                    var selectionBar = tagData.Item2;
+
+                    if (buttonTab == currentTab)
+                    {
+                        selectionBar.Visibility = Visibility.Visible; // Show bar for active tab
+                        tabButton.Background = new SolidColorBrush(ColorHelper.FromArgb(255, 211, 129, 131)); // Active tab color
+                    }
+                    else
+                    {
+                        selectionBar.Visibility = Visibility.Collapsed; // Hide bar for inactive tabs
+                        tabButton.Background = new SolidColorBrush(ColorHelper.FromArgb(255, 201, 99, 110)); // Inactive tab color
+                    }
                 }
             }
 
@@ -271,14 +446,13 @@ namespace InStelle
 
                         foreach (var tab in tabs)
                         {
-                            var tabButton = CreateTabButton(tab);
-                            TabPanel.Children.Insert(TabPanel.Children.Count - 1, tabButton);
+                            var tabStackPanel = CreateTabStackPanel(tab);
+                            TabPanel.Children.Insert(TabPanel.Children.Count - 1, tabStackPanel);
                         }
 
-                        // Restore the last active tab if tabs exist
                         if (tabs.Count > 0)
                         {
-                            SetActiveTab(tabs[0]); // Default to the first tab
+                            SetActiveTab(tabs[0]);
                         }
                     }
                 }
@@ -317,7 +491,7 @@ namespace InStelle
 
     public class TabData
     {
-        public string Icon { get; set; }
+        public string Icon { get; set; } // Path to the tab's image
         public List<Note> Notes { get; set; }
 
         public TabData(string icon)

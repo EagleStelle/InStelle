@@ -23,7 +23,7 @@
             <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled">
                 <StackPanel x:Name="TabPanel" Orientation="Horizontal">
                     <!-- Add Button for Tabs -->
-                    <Button x:Name="AddTabButton" Content="+" Background="#F6C5B8" Foreground="#2D1E37" Height="50" Width="50" Click="AddTab_Click" Margin="5"/>
+                    <Button x:Name="AddTabButton" Content="+" Background="#37264A" FontSize="64" FontFamily="Impact" Height="105" Width="105" Click="AddTab_Click" Margin="5"/>
                 </StackPanel>
             </ScrollViewer>
         </Border>
