@@ -7,13 +7,15 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text.Json;
 using Microsoft.UI;
+using Microsoft.UI.Xaml.Navigation;
 
 namespace InStelle
 {
     public sealed partial class MainPage : Page
     {
-        private readonly List<TabData> tabs = new();
+        private static int lastActiveTabIndex = 0; // Static field to persist the tab index
         private TabData? currentTab = null;
+        private readonly List<TabData> tabs = new();
         private static readonly string savePath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Instelle",
@@ -126,6 +128,18 @@ namespace InStelle
         private void SetActiveTab(TabData tab)
         {
             currentTab = tab;
+
+            // Optional: Add visual indication for the active tab
+            foreach (Button tabButton in TabPanel.Children)
+            {
+                if (tabButton.Tag is TabData buttonTab)
+                {
+                    tabButton.Background = new SolidColorBrush(buttonTab == currentTab
+                        ? ColorHelper.FromArgb(255, 234, 178, 178) // Active tab color
+                        : ColorHelper.FromArgb(255, 211, 129, 131)); // Inactive tab color
+                }
+            }
+
             RefreshNotes();
         }
 
@@ -141,7 +155,7 @@ namespace InStelle
             }
 
             // Add the "Add Note" card
-            NotesPanel.Children.Add(CreateCard("+ Add Note", "", () => AddNote_Click(null, null), isAddCard: true));
+            NotesPanel.Children.Add(CreateCard("+ Add Note", "", () => AddNote_Click(this, new RoutedEventArgs()), isAddCard: true));
         }
 
         private void AddNote_Click(object sender, RoutedEventArgs e)
@@ -150,13 +164,20 @@ namespace InStelle
 
             var newNote = new Note();
 
-            // Navigate to the NotePage with parameters
+            // Save the current tab index to the static field
+            lastActiveTabIndex = tabs.IndexOf(currentTab);
+
+            // Navigate to NotePage
             Frame.Navigate(typeof(NotePage), Tuple.Create(newNote, currentTab, RefreshNotes, SaveTabs));
         }
+
 
         private void ShowNoteDetails(Note note)
         {
             if (currentTab == null) return;
+
+            // Save the current tab index to the static field
+            lastActiveTabIndex = tabs.IndexOf(currentTab);
 
             // Navigate to the NotePage with parameters
             Frame.Navigate(typeof(NotePage), Tuple.Create(note, currentTab, RefreshNotes, SaveTabs));
@@ -183,23 +204,23 @@ namespace InStelle
                 Foreground = isAddCard ? new SolidColorBrush(Colors.Black) : new SolidColorBrush(Colors.White), // Black for Add Note, white for others
                 Margin = new Thickness(0, 0, 0, 5),
                 HorizontalAlignment = isAddCard ? HorizontalAlignment.Center : HorizontalAlignment.Left,
-                TextWrapping = TextWrapping.Wrap
+                TextWrapping = TextWrapping.Wrap,
+                Visibility = string.IsNullOrWhiteSpace(title) ? Visibility.Collapsed : Visibility.Visible
             };
             card.Children.Add(titleText);
 
-            if (!isAddCard)
+            var descriptionText = new TextBlock
             {
-                var descriptionText = new TextBlock
-                {
-                    Text = description,
-                    TextWrapping = TextWrapping.Wrap,
-                    Foreground = new SolidColorBrush(Colors.White), // White for regular note description
-                    MaxLines = 2,
-                    TextTrimming = TextTrimming.CharacterEllipsis,
-                    Visibility = string.IsNullOrWhiteSpace(description) ? Visibility.Collapsed : Visibility.Visible
-                };
-                card.Children.Add(descriptionText);
-            }
+                Text = description,
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = new SolidColorBrush(Colors.White), // White for regular note description
+                MaxLines = string.IsNullOrWhiteSpace(title) ? int.MaxValue : 2, // Expand description if no title
+                TextTrimming = string.IsNullOrWhiteSpace(title) ? TextTrimming.None : TextTrimming.CharacterEllipsis,
+                FontWeight = string.IsNullOrWhiteSpace(title) ? Microsoft.UI.Text.FontWeights.Bold : Microsoft.UI.Text.FontWeights.Normal,
+                FontSize = string.IsNullOrWhiteSpace(title) ? 16 : 14,
+                Visibility = string.IsNullOrWhiteSpace(description) ? Visibility.Collapsed : Visibility.Visible
+            };
+            card.Children.Add(descriptionText);
 
             card.PointerReleased += (s, e) => onClick();
 
@@ -238,9 +259,10 @@ namespace InStelle
                             TabPanel.Children.Insert(TabPanel.Children.Count - 1, tabButton);
                         }
 
+                        // Restore the last active tab if tabs exist
                         if (tabs.Count > 0)
                         {
-                            SetActiveTab(tabs[0]);
+                            SetActiveTab(tabs[0]); // Default to the first tab
                         }
                     }
                 }
@@ -261,6 +283,19 @@ namespace InStelle
                 XamlRoot = this.Content.XamlRoot
             };
             await dialog.ShowAsync();
+        }
+
+        protected override void OnNavigatedTo(NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+
+            // Restore the active tab using the saved index
+            if (tabs.Count > 0 && lastActiveTabIndex >= 0 && lastActiveTabIndex < tabs.Count)
+            {
+                SetActiveTab(tabs[lastActiveTabIndex]);
+            }
+
+            System.Diagnostics.Debug.WriteLine($"Navigating back to MainPage. Restoring Tab Index: {lastActiveTabIndex}");
         }
     }
 
