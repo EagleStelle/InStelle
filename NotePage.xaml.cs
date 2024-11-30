@@ -38,7 +38,7 @@ namespace InStelle
             DescriptionTextBox.Focus(FocusState.Programmatic);
         }
 
-        private void SaveNote_Click(object sender, RoutedEventArgs e)
+        public void SaveNote_Click(object sender, RoutedEventArgs e)
         {
             // Update the note's properties
             _note.Title = TitleTextBox.Text;
@@ -58,13 +58,13 @@ namespace InStelle
             Frame.GoBack();
         }
 
-        private void CancelNote_Click(object sender, RoutedEventArgs e)
+        public void CancelNote_Click(object sender, RoutedEventArgs e)
         {
             // Navigate back without saving
             Frame.GoBack();
         }
 
-        private async void DeleteNote_Click(object sender, RoutedEventArgs e)
+        public async void DeleteNote_Click(object sender, RoutedEventArgs e)
         {
             // Confirm deletion
             var dialog = new ContentDialog
