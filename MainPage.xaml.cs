@@ -360,7 +360,7 @@ namespace InStelle
             Frame.Navigate(typeof(NotePage), Tuple.Create(note, currentTab, RefreshNotes, SaveTabs));
         }
 
-        private UIElement CreateCard(string title, string description, Action onClick, bool isAddCard = false)
+        private UIElement CreateCard(string title, string description, string id, Action onClick, bool isAddCard = false)
         {
             var cardGrid = new Grid
             {
@@ -372,17 +372,6 @@ namespace InStelle
                 HorizontalAlignment = HorizontalAlignment.Stretch,
                 VerticalAlignment = VerticalAlignment.Stretch
             };
-
-            // Determine final title and description based on input
-            if (string.IsNullOrWhiteSpace(title) && string.IsNullOrWhiteSpace(description))
-            {
-                title = "EagleStelle";
-            }
-            else if (string.IsNullOrWhiteSpace(title))
-            {
-                title = description;
-                description = string.Empty;
-            }
 
             // Left section for showing details
             var detailArea = new StackPanel
@@ -397,10 +386,10 @@ namespace InStelle
                 Text = title,
                 FontWeight = Microsoft.UI.Text.FontWeights.Bold,
                 FontSize = 16,
-                Foreground = isAddCard ? new SolidColorBrush(Colors.Black) : new SolidColorBrush(Colors.White), // Black for Add Note, white for others
-                Margin = new Thickness(0, 0, 0, isAddCard ? 0 : 5), // No bottom margin for Add Note
-                HorizontalAlignment = isAddCard ? HorizontalAlignment.Center : HorizontalAlignment.Left, // Center for Add Note, left for others
-                TextAlignment = isAddCard ? TextAlignment.Center : TextAlignment.Left, // Center for Add Note, left for others
+                Foreground = isAddCard ? new SolidColorBrush(Colors.Black) : new SolidColorBrush(Colors.White),
+                Margin = new Thickness(0, 0, 0, isAddCard ? 0 : 5),
+                HorizontalAlignment = isAddCard ? HorizontalAlignment.Center : HorizontalAlignment.Left,
+                TextAlignment = isAddCard ? TextAlignment.Center : TextAlignment.Left,
                 TextWrapping = TextWrapping.Wrap,
                 Visibility = string.IsNullOrWhiteSpace(title) ? Visibility.Collapsed : Visibility.Visible
             };
@@ -410,8 +399,8 @@ namespace InStelle
             {
                 Text = description,
                 TextWrapping = TextWrapping.Wrap,
-                Foreground = new SolidColorBrush(Colors.White), // White for regular note description
-                MaxLines = string.IsNullOrWhiteSpace(title) ? int.MaxValue : 2, // Expand description if no title
+                Foreground = new SolidColorBrush(Colors.White),
+                MaxLines = string.IsNullOrWhiteSpace(title) ? int.MaxValue : 2,
                 TextTrimming = string.IsNullOrWhiteSpace(title) ? TextTrimming.None : TextTrimming.CharacterEllipsis,
                 FontWeight = string.IsNullOrWhiteSpace(title) ? Microsoft.UI.Text.FontWeights.Bold : Microsoft.UI.Text.FontWeights.Normal,
                 FontSize = string.IsNullOrWhiteSpace(title) ? 16 : 14,
@@ -428,18 +417,16 @@ namespace InStelle
                 }
             };
 
-
             // Right section for drag-and-drop
             var dragArea = new Grid
             {
                 Width = 30,
-                Background = new SolidColorBrush(ColorHelper.FromArgb(50, 255, 255, 255)), // Semi-transparent background
+                Background = new SolidColorBrush(ColorHelper.FromArgb(50, 255, 255, 255)),
                 HorizontalAlignment = HorizontalAlignment.Right,
                 VerticalAlignment = VerticalAlignment.Stretch,
-                AllowDrop = true // Enable drop
+                AllowDrop = true
             };
 
-            // Change cursor to indicate drag area (requires Pointer event handlers)
             dragArea.PointerEntered += (s, e) =>
             {
                 var coreWindow = Microsoft.UI.Xaml.Window.Current?.CoreWindow;
@@ -448,6 +435,7 @@ namespace InStelle
                     coreWindow.PointerCursor = new Windows.UI.Core.CoreCursor(Windows.UI.Core.CoreCursorType.SizeAll, 1);
                 }
             };
+
             dragArea.PointerExited += (s, e) =>
             {
                 var coreWindow = Microsoft.UI.Xaml.Window.Current?.CoreWindow;
@@ -461,14 +449,14 @@ namespace InStelle
             dragArea.CanDrag = !isAddCard;
             dragArea.DragStarting += (s, e) =>
             {
-                if (string.IsNullOrWhiteSpace(title))
+                if (string.IsNullOrWhiteSpace(id))
                 {
-                    e.Cancel = true; // Cancel drag for empty titles
+                    e.Cancel = true; // Cancel drag for invalid IDs
                     return;
                 }
 
-                Debug.WriteLine($"DragStarting: {title}");
-                e.Data.SetText(title);
+                Debug.WriteLine($"DragStarting: {id}");
+                e.Data.SetText(id); // Use ID instead of title
                 e.Data.RequestedOperation = DataPackageOperation.Move;
             };
 
@@ -488,28 +476,27 @@ namespace InStelle
                 Debug.WriteLine("Drop event triggered.");
                 if (e.DataView.Contains(StandardDataFormats.Text))
                 {
-                    var droppedTitle = await e.DataView.GetTextAsync();
-                    Debug.WriteLine($"Dropped Title: {droppedTitle}, Target Title: {title}");
-                    ReorderCards(droppedTitle, title);
+                    var sourceId = await e.DataView.GetTextAsync();
+                    Debug.WriteLine($"Dropped ID: {sourceId}, Target ID: {id}");
+                    ReorderCards(sourceId, id); // Reorder based on IDs
                 }
             };
 
-            // Add both areas to the main grid
             cardGrid.Children.Add(detailArea);
             cardGrid.Children.Add(dragArea);
 
             return cardGrid;
         }
 
-        private void ReorderCards(string sourceTitle, string targetTitle)
+        private void ReorderCards(string sourceId, string targetId)
         {
             if (currentTab == null) return;
 
-            Debug.WriteLine($"Reordering: {sourceTitle} -> {targetTitle}");
+            Debug.WriteLine($"Reordering: {sourceId} -> {targetId}");
 
             // Find source and target notes
-            var sourceNote = currentTab.Notes.Find(n => n.Title == sourceTitle);
-            var targetNote = currentTab.Notes.Find(n => n.Title == targetTitle);
+            var sourceNote = currentTab.Notes.Find(n => n.Id == sourceId);
+            var targetNote = currentTab.Notes.Find(n => n.Id == targetId);
 
             if (sourceNote == null)
             {
@@ -547,6 +534,7 @@ namespace InStelle
             RefreshNotes();
             SaveTabs();
         }
+
         private void RefreshNotes()
         {
             NotesPanel.Children.Clear();
@@ -557,10 +545,10 @@ namespace InStelle
 
             foreach (var note in currentTab.Notes)
             {
-                NotesPanel.Children.Add(CreateCard(note.Title, note.Description, () => ShowNoteDetails(note)));
+                NotesPanel.Children.Add(CreateCard(note.Title, note.Description, note.Id, () => ShowNoteDetails(note)));
             }
 
-            NotesPanel.Children.Add(CreateCard("+ Add Note", "", () => AddNote_Click(this, new RoutedEventArgs()), isAddCard: true));
+            NotesPanel.Children.Add(CreateCard("+ Add Note", "", "", () => AddNote_Click(this, new RoutedEventArgs()), isAddCard: true));
         }
 
         private async void ShowError(string message)
